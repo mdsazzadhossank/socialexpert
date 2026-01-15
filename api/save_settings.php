@@ -20,12 +20,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO site_settings (setting_key, setting_value) VALUES (:key, :value) ON DUPLICATE KEY UPDATE setting_value = :value");
+        // Fix: Use unique placeholders for INSERT and UPDATE values
+        $stmt = $pdo->prepare("INSERT INTO site_settings (setting_key, setting_value) VALUES (:key, :value) ON DUPLICATE KEY UPDATE setting_value = :value_update");
         
         foreach ($data as $key => $value) {
             // Encode array/objects to string, keep strings as is
             $jsonValue = is_array($value) || is_object($value) ? json_encode($value) : $value;
-            $stmt->execute(['key' => $key, 'value' => $jsonValue]);
+            
+            // Pass the value twice, once for :value and once for :value_update
+            $stmt->execute([
+                'key' => $key, 
+                'value' => $jsonValue,
+                'value_update' => $jsonValue
+            ]);
         }
 
         echo json_encode(["status" => "success", "message" => "Settings Saved Successfully"]);
