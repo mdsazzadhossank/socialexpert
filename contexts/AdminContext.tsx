@@ -75,7 +75,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Fetch all settings from MySQL on mount
   useEffect(() => {
     fetch(`${API_BASE}/get_settings.php`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.settings) {
           if (data.settings.hero_id) setSelectedHeroState(parseInt(data.settings.hero_id));
@@ -88,16 +91,30 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setAnalytics(data.analytics);
         }
       })
-      .catch(err => console.error("Failed to load settings from API", err));
-  }, []);
+      .catch(err => {
+        console.error("Failed to load settings from API", err);
+        // Only alert if logged in to avoid spamming visitors
+        if(isAuthenticated) alert(`Error loading settings: ${err.message}. Check if /api folder exists.`);
+      });
+  }, [isAuthenticated]);
 
-  // Helper to save to MySQL
+  // Helper to save to MySQL with Better Error Handling
   const saveToApi = (key: string, value: any) => {
     fetch(`${API_BASE}/save_settings.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [key]: value })
-    }).catch(err => console.error("Failed to save to API", err));
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'error') {
+            alert(`Database Error: ${data.message}`);
+        }
+    })
+    .catch(err => {
+        console.error("Failed to save to API", err);
+        alert("Save Failed! Check internet or if API file exists.");
+    });
   };
 
   // Auth Functions
@@ -147,8 +164,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateTrackingConfig = (config: TrackingConfig) => {
     setTrackingConfigState(config);
-    saveToApi('tracking_config', config);
-    setTimeout(() => window.location.reload(), 500);
+    fetch(`${API_BASE}/save_settings.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tracking_config: config })
+      })
+      .then(res => res.json())
+      .then(data => {
+          if(data.status === 'success') {
+              alert('Tracking Config Saved! Reloading...');
+              setTimeout(() => window.location.reload(), 500);
+          } else {
+              alert(`Error: ${data.message}`);
+          }
+      })
+      .catch(err => alert("Failed to save tracking config. Check console."));
   };
 
   const refreshAnalytics = () => {
