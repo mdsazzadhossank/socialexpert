@@ -23,7 +23,7 @@ const DEFAULT_TRACKING = {
   testEventCode: "TEST51227"
 };
 
-const API_BASE = '/api'; // Relative path assuming API folder is at root of public_html
+const API_BASE = '/api'; // Assuming API folder is at root
 
 interface VideoConfig {
   hero: string;
@@ -75,10 +75,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Fetch all settings from MySQL on mount
   useEffect(() => {
     fetch(`${API_BASE}/get_settings.php`)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         if (data.settings) {
           if (data.settings.hero_id) setSelectedHeroState(parseInt(data.settings.hero_id));
@@ -92,28 +89,35 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       })
       .catch(err => {
-        console.error("Failed to load settings from API", err);
-        // Only alert if logged in to avoid spamming visitors
-        if(isAuthenticated) alert(`Error loading settings: ${err.message}. Check if /api folder exists.`);
+        console.error("Failed to load settings:", err);
       });
-  }, [isAuthenticated]);
+  }, []);
 
-  // Helper to save to MySQL with Better Error Handling
+  // Helper to save to MySQL with DETAILED Error Handling
   const saveToApi = (key: string, value: any) => {
     fetch(`${API_BASE}/save_settings.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [key]: value })
     })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'error') {
-            alert(`Database Error: ${data.message}`);
+    .then(async (res) => {
+        const text = await res.text(); // Get raw text first
+        try {
+            const data = JSON.parse(text); // Try parsing JSON
+            if(data.status === 'error') {
+                alert(`Save Error: ${data.message}`);
+            } else {
+                console.log("Saved successfully:", data.message);
+            }
+        } catch (e) {
+            // If JSON parse fails, it's likely a PHP Fatal Error (HTML)
+            console.error("Server Error (Not JSON):", text);
+            alert(`Server Error! Check Console for details. Response: ${text.substring(0, 100)}...`);
         }
     })
     .catch(err => {
-        console.error("Failed to save to API", err);
-        alert("Save Failed! Check internet or if API file exists.");
+        console.error("Network Failed:", err);
+        alert("Network Error: Could not connect to API.");
     });
   };
 
@@ -164,21 +168,28 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateTrackingConfig = (config: TrackingConfig) => {
     setTrackingConfigState(config);
+    // Explicit save for tracking config to handle alert
     fetch(`${API_BASE}/save_settings.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tracking_config: config })
       })
-      .then(res => res.json())
-      .then(data => {
-          if(data.status === 'success') {
-              alert('Tracking Config Saved! Reloading...');
-              setTimeout(() => window.location.reload(), 500);
-          } else {
-              alert(`Error: ${data.message}`);
+      .then(async (res) => {
+          const text = await res.text();
+          try {
+              const data = JSON.parse(text);
+              if(data.status === 'success') {
+                  alert('Tracking Config Saved! Reloading...');
+                  setTimeout(() => window.location.reload(), 500);
+              } else {
+                  alert(`Error: ${data.message}`);
+              }
+          } catch(e) {
+              console.error("Server Raw Response:", text);
+              alert("Server Error! PHP file might be missing or crashing. Check Console.");
           }
       })
-      .catch(err => alert("Failed to save tracking config. Check console."));
+      .catch(err => alert("Failed to save tracking config. Check internet connection."));
   };
 
   const refreshAnalytics = () => {
