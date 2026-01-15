@@ -34,14 +34,21 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return null;
   };
 
-  // 1. Send to Browser Pixel
+  // 1. Send to Browser Pixel (Facebook)
   const sendBrowserEvent = (eventName: string, data: any = {}) => {
     if (typeof window !== 'undefined' && (window as any).fbq) {
       (window as any).fbq('track', eventName, data);
     }
   };
 
-  // 2. Send to CAPI (Conversion API)
+  // 2. Send to GA4
+  const sendGA4Event = (eventName: string, data: any = {}) => {
+    if (typeof window !== 'undefined' && (window as any).gtag && trackingConfig.ga4MeasurementId) {
+      (window as any).gtag('event', eventName, data);
+    }
+  };
+
+  // 3. Send to CAPI (Conversion API)
   const sendCAPIEvent = async (eventName: string, data: any = {}) => {
     if (!trackingConfig.accessToken || !trackingConfig.pixelId) return;
 
@@ -76,7 +83,7 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // 3. Send to Local SQL Database via PHP
+  // 4. Send to Local SQL Database via PHP
   const sendToLocalDB = async (eventName: string, data: any = {}) => {
     try {
       await fetch('/api/track.php', {
@@ -95,6 +102,7 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Unified Track Function
   const trackEvent = (eventName: string, data: any = {}) => {
     sendBrowserEvent(eventName, data);
+    sendGA4Event(eventName, data);
     sendCAPIEvent(eventName, data);
     sendToLocalDB(eventName, data);
   };
@@ -124,6 +132,44 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     (window as any).fbq('init', trackingConfig.pixelId);
   }, [trackingConfig.pixelId]);
+
+  // Initialization: Load GA4 SDK
+  useEffect(() => {
+    if (!trackingConfig.ga4MeasurementId) return;
+
+    // Check if script already exists
+    if(document.getElementById('ga4-script')) return;
+
+    const script = document.createElement('script');
+    script.id = 'ga4-script';
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${trackingConfig.ga4MeasurementId}`;
+    script.async = true;
+    document.head.appendChild(script);
+
+    script.onload = () => {
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      function gtag(...args: any[]){ (window as any).dataLayer.push(arguments); }
+      (window as any).gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', trackingConfig.ga4MeasurementId);
+    };
+
+  }, [trackingConfig.ga4MeasurementId]);
+
+  // Initialization: Microsoft Clarity
+  useEffect(() => {
+    const clarityId = "v1wg8bxo3b";
+    
+    // Check if script already exists (to prevent duplicates in React Strict Mode or re-renders)
+    if (document.getElementById('clarity-script')) return;
+
+    (function(c: any, l: any, a: any, r: any, i: any, t?: any, y?: any){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        t.id = 'clarity-script';
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", clarityId);
+  }, []);
 
   // Track PageView on route change
   useEffect(() => {

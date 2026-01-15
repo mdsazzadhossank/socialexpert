@@ -20,7 +20,8 @@ const DEFAULT_LP_DEMOS = ["#", "#", "#", "#", "#"];
 const DEFAULT_TRACKING = {
   pixelId: "2072676449899461",
   accessToken: "EAAEi26IrIdgBQdTxGEoSj6441lYAZAWtwYwb8FZAlDhF4F2zz9ZBk0cqzKKYbcTPlVH1P6yYkVCTNxZAoDHYRN2WDZCvN8FL87rrbnF1iscnu0ahqZAo64APGHz07ZAKQU7zIE3n7Dg4Jlq2UkfZAFUXP1yN5zXRsKn071O4FkV6he5cxOx1eWdt1yN8ZCZBoKzz8ulwZDZD",
-  testEventCode: "TEST51227"
+  testEventCode: "TEST51227",
+  ga4MeasurementId: ""
 };
 
 const API_BASE = '/api'; // Assuming API folder is at root
@@ -41,6 +42,7 @@ interface TrackingConfig {
   pixelId: string;
   accessToken: string;
   testEventCode: string;
+  ga4MeasurementId?: string;
 }
 
 interface AdminContextType {
@@ -82,7 +84,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (data.settings.video_urls) setVideoUrlsState(data.settings.video_urls);
           if (data.settings.demo_links) setDemoLinksState(data.settings.demo_links);
           if (data.settings.lp_demo_links) setLandingPageDemoLinksState(data.settings.lp_demo_links);
-          if (data.settings.tracking_config) setTrackingConfigState(data.settings.tracking_config);
+          if (data.settings.tracking_config) setTrackingConfigState({...DEFAULT_TRACKING, ...data.settings.tracking_config});
         }
         if (data.analytics) {
           setAnalytics(data.analytics);

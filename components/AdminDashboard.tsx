@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
 import { X, Save, BarChart2, Layout, Video, Settings, Activity, MousePointer, Lock, LogOut, Globe, Link as LinkIcon } from 'lucide-react';
@@ -337,10 +338,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
            {activeTab === 'tracking' && (
               <div className="space-y-6 animate-fade-in">
                  <h3 className="text-3xl font-bold text-slate-900 dark:text-white">Tracking Configuration</h3>
-                 <p className="text-slate-500">Manage Facebook Pixel and Conversion API credentials.</p>
+                 <p className="text-slate-500">Manage Facebook Pixel, GA4, and Conversion API credentials.</p>
                  
                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-6">
                     
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Google Analytics 4 (Measurement ID)</label>
+                        <input 
+                            type="text" 
+                            value={tempTracking.ga4MeasurementId || ''} 
+                            onChange={(e) => setTempTracking({...tempTracking, ga4MeasurementId: e.target.value})}
+                            className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
+                            placeholder="G-XXXXXXXXXX"
+                        />
+                    </div>
+
+                    <div className="border-t border-slate-200 dark:border-slate-700 pt-4"></div>
+
                     <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Facebook Pixel ID</label>
                         <input 
@@ -352,7 +366,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">API Access Token</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Facebook API Access Token</label>
                         <textarea 
                             rows={4}
                             value={tempTracking.accessToken} 
